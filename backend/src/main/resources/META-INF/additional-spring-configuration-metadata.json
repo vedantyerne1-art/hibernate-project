@@ -1,0 +1,91 @@
+{
+  "groups": [
+    {
+      "name": "jwt",
+      "type": "java.lang.Object",
+      "sourceType": "com.trustid.config"
+    },
+    {
+      "name": "app",
+      "type": "java.lang.Object",
+      "sourceType": "com.trustid.config"
+    },
+    {
+      "name": "app.file-storage",
+      "type": "java.lang.Object",
+      "sourceType": "com.trustid.config"
+    },
+    {
+      "name": "app.security",
+      "type": "java.lang.Object",
+      "sourceType": "com.trustid.config"
+    },
+    {
+      "name": "app.qr",
+      "type": "java.lang.Object",
+      "sourceType": "com.trustid.config"
+    },
+    {
+      "name": "app.admin-bootstrap",
+      "type": "java.lang.Object",
+      "sourceType": "com.trustid.config"
+    }
+  ],
+  "properties": [
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "JWT signing secret."
+    },
+    {
+      "name": "jwt.access-expiration-ms",
+      "type": "java.lang.Long",
+      "description": "Access token expiration in milliseconds."
+    },
+    {
+      "name": "jwt.refresh-expiration-ms",
+      "type": "java.lang.Long",
+      "description": "Refresh token expiration in milliseconds."
+    },
+    {
+      "name": "app.file-storage.upload-dir",
+      "type": "java.lang.String",
+      "description": "Upload directory path for file storage."
+    },
+    {
+      "name": "app.security.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated CORS allowed origins."
+    },
+    {
+      "name": "app.qr.verify-base-url",
+      "type": "java.lang.String",
+      "description": "Base URL for public QR verification endpoint."
+    },
+    {
+      "name": "app.qr.token-expiration-ms",
+      "type": "java.lang.Long",
+      "description": "QR verification token expiration in milliseconds."
+    },
+    {
+      "name": "app.admin-bootstrap.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable auto-creation of a development admin account."
+    },
+    {
+      "name": "app.admin-bootstrap.full-name",
+      "type": "java.lang.String",
+      "description": "Default full name for development admin user."
+    },
+    {
+      "name": "app.admin-bootstrap.email",
+      "type": "java.lang.String",
+      "description": "Default email for development admin user."
+    },
+    {
+      "name": "app.admin-bootstrap.password",
+      "type": "java.lang.String",
+      "description": "Default password for development admin user."
+    }
+  ]
+}
