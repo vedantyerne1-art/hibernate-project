@@ -14,7 +14,10 @@ export default function Register() {
     e.preventDefault();
     const resultAction = await dispatch(register(formData));
     if (register.fulfilled.match(resultAction)) {
-      navigate('/verify-email', { state: { email: formData.email } });
+      const warning = resultAction.payload?.verificationEmailSent === false
+        ? 'Account created, but OTP email could not be sent. Please fix Gmail SMTP, then tap Send OTP.'
+        : '';
+      navigate('/verify-email', { state: { email: formData.email, warning } });
     }
   };
 

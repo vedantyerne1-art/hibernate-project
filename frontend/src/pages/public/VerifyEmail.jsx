@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 const VerifyEmail = () => {
   const location = useLocation();
   const navEmail = location.state?.email || '';
+  const navWarning = location.state?.warning || '';
   const storedUser = (() => {
     try {
       return JSON.parse(localStorage.getItem('user') || 'null');
@@ -15,7 +16,7 @@ const VerifyEmail = () => {
   const [email, setEmail] = useState(navEmail || storedUser?.email || '');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState(1);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState(navWarning);
 
   const sendOtp = async () => {
     try {

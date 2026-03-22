@@ -14,5 +14,6 @@ import java.time.LocalDateTime;
 public class QrTokenResponse {
     private String token;
     private String verificationUrl;
+    private String qrCodeBase64;
     private LocalDateTime expiresAt;
 }

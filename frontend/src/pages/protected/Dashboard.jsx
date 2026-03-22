@@ -59,6 +59,10 @@ const Dashboard = () => {
   const profilePhotoSrc = profile?.profilePhotoUrl
     ? `${API_BASE_URL.replace(/\/api$/, '')}/uploads/${encodeURIComponent(profile.profilePhotoUrl)}`
     : '';
+  const verificationQrImageSrc = qrData?.qrCodeBase64
+    || (qrData?.verificationUrl
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrData.verificationUrl)}`
+      : '');
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -203,7 +207,7 @@ const Dashboard = () => {
                   <img
                     alt="Identity QR"
                     className="w-[180px] h-[180px] border rounded"
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrData.verificationUrl)}`}
+                    src={verificationQrImageSrc}
                   />
                   <div>
                     <p className="text-sm text-gray-500 mb-2">Verification URL</p>

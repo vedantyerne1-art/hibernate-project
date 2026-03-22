@@ -47,8 +47,12 @@ public class AuthService {
                 .build();
 
         User savedUser = userRepository.save(user);
-        
-        emailVerificationService.sendVerificationEmail(savedUser.getEmail());
+                boolean verificationEmailSent = true;
+                try {
+                        emailVerificationService.sendVerificationEmail(savedUser.getEmail());
+                } catch (RuntimeException ex) {
+                        verificationEmailSent = false;
+                }
         
         CustomUserDetails userDetails = new CustomUserDetails(savedUser);
         String jwtToken = jwtService.generateToken(userDetails);
@@ -62,6 +66,7 @@ public class AuthService {
                 .email(savedUser.getEmail())
                 .role(savedUser.getRole())
                 .emailVerified(savedUser.isEmailVerified())
+                .verificationEmailSent(verificationEmailSent)
                 .build();
     }
 
@@ -95,6 +100,7 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .emailVerified(user.isEmailVerified())
+                .verificationEmailSent(true)
                 .build();
     }
 

@@ -14,6 +14,8 @@ app:
     upload-dir: ${APP_UPLOAD_DIR:../uploads}
   security:
     allowed-origins: ${APP_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  mail:
+    fallback-to-mailpit: ${APP_MAIL_FALLBACK_TO_MAILPIT:true}
   qr:
     verify-base-url: ${APP_QR_VERIFY_BASE_URL:http://localhost:5173/public/verify}
     token-expiration-ms: ${APP_QR_TOKEN_EXPIRATION_MS:300000}

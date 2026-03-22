@@ -1,12 +1,15 @@
 package com.trustid.identity.service;
 
-import java.net.MalformedURLException;
+import java.io.ByteArrayOutputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Base64;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +19,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import com.trustid.document.service.FileStorageService;
 import com.trustid.identity.dto.PublicQrVerificationResponse;
 import com.trustid.identity.dto.QrTokenResponse;
@@ -59,10 +67,12 @@ public class QrVerificationService {
         String token = jwtService.generateToken(claims, "qr-verify:" + user.getEmail(), qrTokenExpirationMs);
         LocalDateTime expiresAt = LocalDateTime.now().plusNanos(qrTokenExpirationMs * 1_000_000L);
         String resolvedVerifyBaseUrl = resolvePublicBaseUrl(qrVerifyBaseUrl);
+        String verificationUrl = buildVerificationUrl(resolvedVerifyBaseUrl, token);
 
         return QrTokenResponse.builder()
                 .token(token)
-                .verificationUrl(resolvedVerifyBaseUrl + "?token=" + token)
+                .verificationUrl(verificationUrl)
+                .qrCodeBase64(generateQrBase64(verificationUrl))
                 .expiresAt(expiresAt)
                 .build();
     }
@@ -127,6 +137,27 @@ public class QrVerificationService {
                 return configuredBaseUrl
                                 .replace("localhost", lanIp)
                                 .replace("127.0.0.1", lanIp);
+        }
+
+        private String buildVerificationUrl(String baseUrl, String token) {
+                if (baseUrl == null || baseUrl.isBlank()) {
+                        throw new RuntimeException("QR verification base URL is not configured");
+                }
+                String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+                return normalizedBaseUrl + "?token=" + token;
+        }
+
+        private String generateQrBase64(String value) {
+                try {
+                        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+                        BitMatrix bitMatrix = qrCodeWriter.encode(value, BarcodeFormat.QR_CODE, 240, 240);
+                        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", outputStream);
+                        return "data:image/png;base64," + Base64.getEncoder().encodeToString(outputStream.toByteArray());
+                } catch (WriterException | java.io.IOException ex) {
+                        // Keep token generation resilient even if QR encoding fails.
+                        return "data:text/plain;base64," + Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+                }
         }
 
         private String detectLanIpv4() {

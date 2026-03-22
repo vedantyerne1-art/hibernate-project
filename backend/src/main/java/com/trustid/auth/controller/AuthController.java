@@ -1,6 +1,7 @@
 package com.trustid.auth.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailAuthenticationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,7 +33,11 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
         try {
             AuthResponse response = authService.register(request, extractClientIp(httpRequest), httpRequest.getHeader("User-Agent"));
-            return ResponseEntity.ok(ApiResponse.success(response, "User registered successfully, please verify email."));
+            if (response.isVerificationEmailSent()) {
+                return ResponseEntity.ok(ApiResponse.success(response, "User registered successfully, please verify email."));
+            }
+            return ResponseEntity.ok(ApiResponse.success(response,
+                    "User registered, but OTP email could not be sent. Please fix Gmail SMTP and use Send OTP on Verify Email page."));
         } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
         }
@@ -55,6 +60,8 @@ public class AuthController {
         try {
             emailVerificationService.sendVerificationEmail(request.getEmail());
             return ResponseEntity.ok(ApiResponse.success(null, "Verification OTP sent"));
+        } catch (MailAuthenticationException ex) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("OTP email sending failed: Gmail SMTP authentication failed. Update GMAIL_USERNAME and GMAIL_APP_PASSWORD."));
         } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
         }
