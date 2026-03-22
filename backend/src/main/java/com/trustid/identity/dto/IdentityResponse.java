@@ -1,7 +1,9 @@
 package com.trustid.identity.dto;
 
 import com.trustid.common.enums.IdentityStatus;
+import com.trustid.common.enums.IdentityLevel;
 import com.trustid.common.enums.KycOnboardingStep;
+import com.trustid.common.enums.RiskLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -51,4 +53,7 @@ public class IdentityResponse {
     private LocalDateTime approvedAt;
     private LocalDateTime rejectedAt;
     private String rejectionReason;
+    private Integer trustScore;
+    private IdentityLevel identityLevel;
+    private RiskLevel riskLevel;
 }

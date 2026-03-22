@@ -8,6 +8,7 @@ import Register from './pages/public/Register';
 import VerifyEmail from './pages/public/VerifyEmail';
 import PublicQrVerify from './pages/public/PublicQrVerify';
 import PublicVerifyToken from './pages/public/PublicVerifyToken';
+import PublicShareLink from './pages/public/PublicShareLink';
 import Dashboard from './pages/protected/Dashboard';
 import ProfileSetup from './pages/protected/ProfileSetup';
 import DocumentVault from './pages/protected/DocumentVault';
@@ -16,6 +17,9 @@ import MyLocker from './pages/protected/MyLocker';
 import DigitalIdCard from './pages/protected/DigitalIdCard';
 import ConsentDashboard from './pages/protected/ConsentDashboard';
 import AdminDashboard from './pages/protected/AdminDashboard';
+import NotificationCenter from './pages/protected/NotificationCenter';
+import SessionManagement from './pages/protected/SessionManagement';
+import ActivityTimeline from './pages/protected/ActivityTimeline';
 
 const toRoleArray = (user) => {
   if (Array.isArray(user?.roles)) {
@@ -73,6 +77,7 @@ function AppRoutes() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/public/verify" element={<PublicQrVerify />} />
           <Route path="/public/verify/:token" element={<PublicVerifyToken />} />
+          <Route path="/share/:token" element={<PublicShareLink />} />
           
           <Route path="/dashboard" element={<ProtectedRoute requiredRoles={["ROLE_USER"]}><Dashboard /></ProtectedRoute>} />
           <Route path="/profile-setup" element={<ProtectedRoute requiredRoles={["ROLE_USER"]}><OnboardingWizard /></ProtectedRoute>} />
@@ -81,6 +86,9 @@ function AppRoutes() {
           <Route path="/locker" element={<ProtectedRoute requiredRoles={["ROLE_USER"]}><MyLocker /></ProtectedRoute>} />
           <Route path="/digital-id" element={<ProtectedRoute requiredRoles={["ROLE_USER"]}><DigitalIdCard /></ProtectedRoute>} />
           <Route path="/consents" element={<ProtectedRoute requiredRoles={["ROLE_USER"]}><ConsentDashboard /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute requiredRoles={["ROLE_USER"]}><NotificationCenter /></ProtectedRoute>} />
+          <Route path="/sessions" element={<ProtectedRoute requiredRoles={["ROLE_USER"]}><SessionManagement /></ProtectedRoute>} />
+          <Route path="/timeline" element={<ProtectedRoute requiredRoles={["ROLE_USER"]}><ActivityTimeline /></ProtectedRoute>} />
           
           <Route path="/admin/dashboard" element={<ProtectedRoute requiredRoles={["ROLE_ADMIN", "ROLE_SUPER_ADMIN"]}><AdminDashboard /></ProtectedRoute>} />
           <Route path="*" element={<RoleHomeRedirect />} />

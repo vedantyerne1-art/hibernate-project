@@ -16,6 +16,7 @@ import com.trustid.auth.service.AuthService;
 import com.trustid.auth.service.EmailVerificationService;
 import com.trustid.common.dto.ApiResponse;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -28,9 +29,9 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
         try {
-            AuthResponse response = authService.register(request);
+            AuthResponse response = authService.register(request, extractClientIp(httpRequest), httpRequest.getHeader("User-Agent"));
             return ResponseEntity.ok(ApiResponse.success(response, "User registered successfully, please verify email."));
         } catch (RuntimeException ex) {
             return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
@@ -38,9 +39,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         try {
-            AuthResponse response = authService.login(request);
+            AuthResponse response = authService.login(request, extractClientIp(httpRequest), httpRequest.getHeader("User-Agent"));
             return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
         } catch (BadCredentialsException ex) {
             return ResponseEntity.status(401).body(ApiResponse.error("Invalid email or password"));
@@ -51,8 +52,12 @@ public class AuthController {
 
     @PostMapping("/send-verification")
     public ResponseEntity<ApiResponse<Void>> sendVerification(@Valid @RequestBody SendVerificationRequest request) {
-        emailVerificationService.sendVerificationEmail(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.success(null, "Verification OTP sent"));
+        try {
+            emailVerificationService.sendVerificationEmail(request.getEmail());
+            return ResponseEntity.ok(ApiResponse.success(null, "Verification OTP sent"));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(ex.getMessage()));
+        }
     }
 
     @PostMapping("/verify-email")
@@ -63,5 +68,13 @@ public class AuthController {
         } else {
             return ResponseEntity.badRequest().body(ApiResponse.error("Invalid or expired OTP"));
         }
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

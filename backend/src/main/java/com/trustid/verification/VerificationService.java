@@ -7,12 +7,17 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.trustid.audit.service.AuditService;
+import com.trustid.common.enums.AuditAction;
 import com.trustid.common.enums.DocumentStatus;
+import com.trustid.common.enums.IdentityLevel;
 import com.trustid.common.enums.IdentityStatus;
+import com.trustid.common.enums.NotificationType;
 import com.trustid.document.entity.KycDocument;
 import com.trustid.document.repository.DocumentRepository;
 import com.trustid.identity.entity.IdentityProfile;
 import com.trustid.identity.repository.IdentityRepository;
+import com.trustid.notification.service.NotificationService;
 import com.trustid.user.entity.User;
 import com.trustid.user.repository.UserRepository;
 
@@ -27,6 +32,8 @@ public class VerificationService {
     private final IdentityRepository identityProfileRepository;
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final AuditService auditService;
 
     @Transactional
     public VerificationRequest submitRequest(String email, SubmitVerificationRequest requestPayload) {
@@ -50,6 +57,7 @@ public class VerificationService {
         documentRepository.saveAll(documents);
 
         profile.setStatus(IdentityStatus.UNDER_REVIEW);
+        profile.setIdentityLevel(IdentityLevel.LEVEL_3_KYC_SUBMITTED);
         identityProfileRepository.save(profile);
 
         VerificationRequest req = new VerificationRequest();
@@ -60,7 +68,9 @@ public class VerificationService {
         req.setStatus(VerificationRequest.VerificationStatus.PENDING);
         req.setResubmissionReason(null);
 
-        return verificationRequestRepository.save(req);
+        VerificationRequest saved = verificationRequestRepository.save(req);
+        auditService.log(user.getId(), user.getRole(), AuditAction.SUBMIT_VERIFICATION, "VERIFICATION_REQUEST", saved.getId(), "Verification request submitted", null, null);
+        return saved;
     }
 
     @Transactional
@@ -84,6 +94,7 @@ public class VerificationService {
 
         profile.setStatus(IdentityStatus.UNDER_REVIEW);
         profile.setRejectionReason(null);
+        profile.setIdentityLevel(IdentityLevel.LEVEL_3_KYC_SUBMITTED);
         identityProfileRepository.save(profile);
 
         VerificationRequest req = new VerificationRequest();
@@ -94,7 +105,9 @@ public class VerificationService {
         req.setStatus(VerificationRequest.VerificationStatus.PENDING);
         req.setResubmissionReason(null);
 
-        return verificationRequestRepository.save(req);
+        VerificationRequest saved = verificationRequestRepository.save(req);
+        auditService.log(user.getId(), user.getRole(), AuditAction.REQUEST_RESUBMISSION, "VERIFICATION_REQUEST", saved.getId(), "Verification request resubmitted", null, null);
+        return saved;
     }
 
     @Transactional
@@ -117,12 +130,15 @@ public class VerificationService {
         switch (reviewData.getStatus()) {
             case APPROVED -> {
                 profile.setStatus(IdentityStatus.APPROVED);
+                profile.setIdentityLevel(IdentityLevel.LEVEL_4_VERIFIED);
                 profile.setApprovedAt(LocalDateTime.now());
                 req.getDocuments().forEach(doc -> doc.setStatus(DocumentStatus.VERIFIED));
                 documentRepository.saveAll(req.getDocuments());
+                notificationService.notifyUser(profile.getUserId(), NotificationType.KYC_APPROVED, "KYC approved", "Your KYC has been approved.", null);
             }
             case REJECTED -> {
                 profile.setStatus(IdentityStatus.REJECTED);
+                profile.setIdentityLevel(IdentityLevel.LEVEL_2_PROFILE);
                 profile.setRejectedAt(LocalDateTime.now());
                 profile.setRejectionReason(
                         reviewData.getRejectionReason() != null && !reviewData.getRejectionReason().isBlank()
@@ -130,9 +146,11 @@ public class VerificationService {
                                 : reviewData.getNotes());
                 req.getDocuments().forEach(doc -> doc.setStatus(DocumentStatus.REJECTED));
                 documentRepository.saveAll(req.getDocuments());
+                notificationService.notifyUser(profile.getUserId(), NotificationType.KYC_REJECTED, "KYC rejected", profile.getRejectionReason(), null);
             }
             case RESUBMISSION_REQUIRED, CHANGES_REQUESTED -> {
                 profile.setStatus(IdentityStatus.RESUBMISSION_REQUIRED);
+                profile.setIdentityLevel(IdentityLevel.LEVEL_2_PROFILE);
                 profile.setRejectedAt(LocalDateTime.now());
                 String reason = reviewData.getResubmissionReason() != null && !reviewData.getResubmissionReason().isBlank()
                         ? reviewData.getResubmissionReason()
@@ -145,6 +163,7 @@ public class VerificationService {
                     }
                 });
                 documentRepository.saveAll(req.getDocuments());
+                notificationService.notifyUser(profile.getUserId(), NotificationType.RESUBMISSION_REQUIRED, "Resubmission required", reason, null);
             }
             case IN_REVIEW -> profile.setStatus(IdentityStatus.UNDER_REVIEW);
             default -> {
@@ -153,7 +172,17 @@ public class VerificationService {
         }
 
         identityProfileRepository.save(profile);
-        return verificationRequestRepository.save(req);
+        VerificationRequest saved = verificationRequestRepository.save(req);
+        switch (reviewData.getStatus()) {
+            case APPROVED -> auditService.log(admin.getId(), admin.getRole(), AuditAction.APPROVE_VERIFICATION, "VERIFICATION_REQUEST", saved.getId(), "Admin approved KYC", null, null);
+            case REJECTED -> auditService.log(admin.getId(), admin.getRole(), AuditAction.REJECT_VERIFICATION, "VERIFICATION_REQUEST", saved.getId(), "Admin rejected KYC", null, null);
+            case RESUBMISSION_REQUIRED, CHANGES_REQUESTED ->
+                    auditService.log(admin.getId(), admin.getRole(), AuditAction.REQUEST_RESUBMISSION, "VERIFICATION_REQUEST", saved.getId(), "Admin requested resubmission", null, null);
+            default -> {
+                // No audit event for passive status updates.
+            }
+        }
+        return saved;
     }
 
     @Transactional
@@ -204,6 +233,11 @@ public class VerificationService {
                         .fileName(doc.getFileName())
                         .mimeType(doc.getMimeType())
                         .fileSize(doc.getFileSize())
+                    .versionNumber(doc.getVersionNumber())
+                    .ocrName(doc.getOcrName())
+                    .ocrDob(doc.getOcrDob())
+                    .ocrDocumentNumber(doc.getOcrDocumentNumber())
+                    .comparisonWarning(doc.getComparisonWarning())
                         .build()).collect(Collectors.toList()))
                 .build();
     }

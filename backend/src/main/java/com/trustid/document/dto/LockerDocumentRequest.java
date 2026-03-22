@@ -21,4 +21,6 @@ public class LockerDocumentRequest {
     private String holderName;
     private LocalDate issueDate;
     private LocalDate expiryDate;
+    private String folderName;
+    private String tags;
 }

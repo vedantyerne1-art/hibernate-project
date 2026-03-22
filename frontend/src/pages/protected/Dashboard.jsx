@@ -4,6 +4,7 @@ import { fetchIdentityProfile } from '../../features/identity/identitySlice';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout } from '../../features/auth/authSlice';
 import axios from '../../api/axios';
+import { API_BASE_URL } from '../../api/axios';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -13,10 +14,28 @@ const Dashboard = () => {
   const [qrData, setQrData] = useState(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState('');
+  const [hideProfilePhoto, setHideProfilePhoto] = useState(false);
+  const [insights, setInsights] = useState(null);
 
   useEffect(() => {
     dispatch(fetchIdentityProfile());
   }, [dispatch]);
+
+  useEffect(() => {
+    const loadInsights = async () => {
+      try {
+        const response = await axios.get('/identity/insights');
+        setInsights(response?.data?.data || null);
+      } catch {
+        setInsights(null);
+      }
+    };
+    loadInsights();
+  }, []);
+
+  useEffect(() => {
+    setHideProfilePhoto(false);
+  }, [profile?.profilePhotoUrl]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -37,6 +56,9 @@ const Dashboard = () => {
   };
 
   const isApproved = profile?.status === 'APPROVED';
+  const profilePhotoSrc = profile?.profilePhotoUrl
+    ? `${API_BASE_URL.replace(/\/api$/, '')}/uploads/${encodeURIComponent(profile.profilePhotoUrl)}`
+    : '';
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -53,6 +75,9 @@ const Dashboard = () => {
           <Link to="/documents" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Document Vault</Link>
           <Link to="/digital-id" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Digital ID</Link>
           <Link to="/consents" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Linked Apps</Link>
+          <Link to="/timeline" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Timeline</Link>
+          <Link to="/sessions" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Sessions</Link>
+          <Link to="/notifications" className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Notifications</Link>
         </nav>
         <div className="absolute bottom-0 w-full p-4 border-t">
           <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md font-medium">
@@ -69,12 +94,64 @@ const Dashboard = () => {
             <p className="text-gray-500 mt-1">Manage your digital identity and credentials.</p>
           </header>
 
+          {insights && (
+            <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="rounded-lg border p-3 bg-slate-50">
+                  <p className="text-xs text-slate-500 uppercase">Trust Score</p>
+                  <p className="text-2xl font-bold text-blue-700">{insights.trustScore}/100</p>
+                </div>
+                <div className="rounded-lg border p-3 bg-slate-50">
+                  <p className="text-xs text-slate-500 uppercase">Identity Level</p>
+                  <p className="text-lg font-semibold">{insights.identityLevel}</p>
+                </div>
+                <div className="rounded-lg border p-3 bg-slate-50">
+                  <p className="text-xs text-slate-500 uppercase">Risk</p>
+                  <p className={`text-lg font-semibold ${insights.riskLevel === 'HIGH' ? 'text-red-600' : insights.riskLevel === 'MEDIUM' ? 'text-amber-600' : 'text-green-600'}`}>{insights.riskLevel}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="font-semibold mb-2">Smart Suggestions</p>
+                  <ul className="space-y-1 text-sm text-slate-700">
+                    {(insights.suggestions || []).map((s, i) => <li key={i}>- {s}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold mb-2">Security Alerts</p>
+                  <ul className="space-y-1 text-sm text-slate-700">
+                    {(insights.alerts || []).length === 0 && <li>- No active alerts</li>}
+                    {(insights.alerts || []).map((s, i) => <li key={i}>- {s}</li>)}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                <Link to="/timeline" className="px-3 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100">View Timeline</Link>
+                <Link to="/sessions" className="px-3 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100">Manage Sessions</Link>
+                <Link to="/notifications" className="px-3 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100">Notification Center</Link>
+              </div>
+            </section>
+          )}
+
           <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h3 className="text-xl font-semibold mb-4">Identity Profile</h3>
             {loading ? (
               <p className="text-gray-500">Loading profile...</p>
             ) : profile ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-[88px_1fr] gap-4">
+                <div>
+                  {!hideProfilePhoto && profilePhotoSrc && (
+                    <img
+                      src={profilePhotoSrc}
+                      alt="Profile"
+                      className="w-[88px] h-[88px] rounded-full object-cover border border-gray-200"
+                      onError={() => setHideProfilePhoto(true)}
+                    />
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">TrustID Number</p>
                   <p className="font-medium text-lg text-blue-700">{profile.identityNumber || 'Pending allocation'}</p>
@@ -90,6 +167,7 @@ const Dashboard = () => {
                   }`}>
                     {profile.status}
                   </span>
+                </div>
                 </div>
               </div>
             ) : (

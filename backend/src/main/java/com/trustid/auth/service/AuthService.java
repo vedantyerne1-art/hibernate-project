@@ -3,6 +3,8 @@ package com.trustid.auth.service;
 import com.trustid.auth.dto.AuthResponse;
 import com.trustid.auth.dto.LoginRequest;
 import com.trustid.auth.dto.RegisterRequest;
+import com.trustid.audit.service.AuditService;
+import com.trustid.common.enums.AuditAction;
 import com.trustid.common.enums.Role;
 import com.trustid.security.CustomUserDetails;
 import com.trustid.security.JwtService;
@@ -25,9 +27,11 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailVerificationService emailVerificationService;
+        private final SessionService sessionService;
+        private final AuditService auditService;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+        public AuthResponse register(RegisterRequest request, String ipAddress, String userAgent) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
         }
@@ -48,6 +52,8 @@ public class AuthService {
         
         CustomUserDetails userDetails = new CustomUserDetails(savedUser);
         String jwtToken = jwtService.generateToken(userDetails);
+        sessionService.trackSession(savedUser.getId(), jwtToken, ipAddress, userAgent, resolveDeviceName(userAgent));
+        auditService.log(savedUser.getId(), savedUser.getRole(), AuditAction.REGISTER, "USER", savedUser.getId(), "User registered", ipAddress, userAgent);
 
         return AuthResponse.builder()
                 .accessToken(jwtToken)
@@ -60,7 +66,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse login(LoginRequest request) {
+        public AuthResponse login(LoginRequest request, String ipAddress, String userAgent) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -79,6 +85,8 @@ public class AuthService {
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
         String jwtToken = jwtService.generateToken(userDetails);
+        sessionService.trackSession(user.getId(), jwtToken, ipAddress, userAgent, resolveDeviceName(userAgent));
+        auditService.log(user.getId(), user.getRole(), AuditAction.LOGIN_SUCCESS, "USER", user.getId(), "User logged in", ipAddress, userAgent);
 
         return AuthResponse.builder()
                 .accessToken(jwtToken)
@@ -89,4 +97,17 @@ public class AuthService {
                 .emailVerified(user.isEmailVerified())
                 .build();
     }
+
+        private String resolveDeviceName(String userAgent) {
+                if (userAgent == null || userAgent.isBlank()) {
+                        return "Unknown Device";
+                }
+                String ua = userAgent.toLowerCase();
+                if (ua.contains("android")) return "Android";
+                if (ua.contains("iphone") || ua.contains("ios")) return "iPhone";
+                if (ua.contains("windows")) return "Windows";
+                if (ua.contains("mac")) return "Mac";
+                if (ua.contains("linux")) return "Linux";
+                return "Web Browser";
+        }
 }

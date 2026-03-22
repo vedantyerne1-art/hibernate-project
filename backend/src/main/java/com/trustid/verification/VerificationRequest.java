@@ -86,6 +86,7 @@ public class VerificationRequest {
 
     public enum VerificationStatus {
         PENDING,
+        UNDER_REVIEW,
         IN_REVIEW,
         APPROVED,
         REJECTED,

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchPendingRequests, reviewRequest } from '../../features/admin/adminSlice';
+import { fetchPendingRequests, fetchRiskUsers, reviewRequest } from '../../features/admin/adminSlice';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../../features/auth/authSlice';
 import axios from '../../api/axios';
@@ -8,12 +8,18 @@ import axios from '../../api/axios';
 const AdminDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { requests, loading } = useSelector(state => state.admin);
+  const { requests, riskUsers, loading } = useSelector(state => state.admin);
   const [selectedReq, setSelectedReq] = useState(null);
+  const [riskLevel, setRiskLevel] = useState('HIGH');
 
   useEffect(() => {
     dispatch(fetchPendingRequests('PENDING'));
+    dispatch(fetchRiskUsers('HIGH'));
   }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchRiskUsers(riskLevel));
+  }, [dispatch, riskLevel]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -82,6 +88,27 @@ const AdminDashboard = () => {
         <h2 className="text-3xl font-bold text-slate-800 mb-6">KYC Verification Inbox</h2>
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-1 border-r pr-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="bg-white rounded-lg border p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-sm">Risk Detection Board</h3>
+                <select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value)} className="text-xs border rounded p-1">
+                  <option value="HIGH">HIGH</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="LOW">LOW</option>
+                </select>
+              </div>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {(riskUsers || []).map((user) => (
+                  <div key={user.userId} className="p-2 bg-red-50 border border-red-100 rounded">
+                    <p className="text-xs font-semibold">{user.fullName}</p>
+                    <p className="text-[11px] text-slate-600">{user.email}</p>
+                    <p className="text-[11px] text-slate-600">Trust: {user.trustScore} · {user.identityLevel}</p>
+                  </div>
+                ))}
+                {(riskUsers || []).length === 0 && <p className="text-xs text-slate-500">No users in this risk band.</p>}
+              </div>
+            </div>
+
             {loading && <p>Loading requests...</p>}
             {!loading && requests.length === 0 && <p className="text-gray-500">No pending requests.</p>}
             {requests.map(req => (
@@ -127,6 +154,10 @@ const AdminDashboard = () => {
                       <div>
                         <div className="font-medium text-sm">{doc.documentType}</div>
                         <div className="text-xs text-gray-500">{doc.documentNumber || "No doc number provided"}</div>
+                        <div className="text-xs text-gray-500">Version: {doc.versionNumber || 1}</div>
+                        {doc.ocrName && <div className="text-xs text-gray-500">OCR Name: {doc.ocrName}</div>}
+                        {doc.ocrDob && <div className="text-xs text-gray-500">OCR DOB: {doc.ocrDob}</div>}
+                        {doc.comparisonWarning && <div className="text-xs text-amber-700">Warning: {doc.comparisonWarning}</div>}
                       </div>
                       <button
                         type="button"

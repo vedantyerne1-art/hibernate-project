@@ -4,8 +4,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.trustid.common.enums.IdentityLevel;
 import com.trustid.common.enums.IdentityStatus;
 import com.trustid.common.enums.KycOnboardingStep;
+import com.trustid.common.enums.RiskLevel;
 import com.trustid.document.service.FileStorageService;
 import com.trustid.identity.dto.IdentityCreateRequest;
 import com.trustid.identity.dto.IdentityResponse;
@@ -93,6 +95,7 @@ public class IdentityService {
         profile.setOnboardingStep(KycOnboardingStep.STEP_6_REVIEW_SUBMIT);
         profile.setOnboardingProgress(100);
         profile.setOnboardingCompleted(true);
+        profile.setIdentityLevel(IdentityLevel.LEVEL_3_KYC_SUBMITTED);
         if (profile.getStatus() == IdentityStatus.REJECTED || profile.getStatus() == IdentityStatus.RESUBMISSION_REQUIRED) {
             profile.setRejectionReason(null);
             profile.setRejectedAt(null);
@@ -173,6 +176,9 @@ public class IdentityService {
                 .approvedAt(profile.getApprovedAt())
                 .rejectedAt(profile.getRejectedAt())
                 .rejectionReason(profile.getRejectionReason())
+                .trustScore(profile.getTrustScore())
+                .identityLevel(profile.getIdentityLevel())
+                .riskLevel(profile.getRiskLevel())
                 .build();
     }
 
@@ -238,6 +244,16 @@ public class IdentityService {
                     safe(profile.getCurrentState()),
                     safe(profile.getCurrentPincode()),
                     safe(profile.getCurrentCountry())).replaceAll("(, )+", ", ").replaceAll("^, |, $", ""));
+        }
+
+        if (profile.getTrustScore() == null) {
+            profile.setTrustScore(0);
+        }
+        if (profile.getIdentityLevel() == null) {
+            profile.setIdentityLevel(IdentityLevel.LEVEL_1_BASIC);
+        }
+        if (profile.getRiskLevel() == null) {
+            profile.setRiskLevel(RiskLevel.LOW);
         }
     }
 

@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../../api/axios';
+import { API_BASE_URL } from '../../api/axios';
 
 export default function DigitalIdCard() {
   const [card, setCard] = useState(null);
   const [err, setErr] = useState('');
+  const [hideProfilePhoto, setHideProfilePhoto] = useState(false);
 
   const generate = async () => {
     setErr('');
+    setHideProfilePhoto(false);
     try {
       const res = await axios.post('/qr/generate');
       setCard(res?.data?.data || null);
@@ -15,6 +18,10 @@ export default function DigitalIdCard() {
       setErr(e?.response?.data?.message || 'Could not generate digital ID');
     }
   };
+
+  const profilePhotoSrc = card?.profilePhotoUrl
+    ? `${API_BASE_URL.replace(/\/api$/, '')}/uploads/${encodeURIComponent(card.profilePhotoUrl)}`
+    : '';
 
   return (
     <div className="min-h-screen bg-slate-100 p-6">
@@ -39,7 +46,14 @@ export default function DigitalIdCard() {
                 <a className="text-blue-600 text-sm" href={card.verificationUrl} target="_blank" rel="noreferrer">Public Verify Link</a>
               </div>
               <div className="text-center">
-                {card.profilePhotoUrl && <img alt="profile" src={`http://localhost:8080/uploads/${card.profilePhotoUrl}`} className="w-20 h-20 object-cover rounded-full mx-auto mb-2" />}
+                {!hideProfilePhoto && profilePhotoSrc && (
+                  <img
+                    alt="profile"
+                    src={profilePhotoSrc}
+                    className="w-20 h-20 object-cover rounded-full mx-auto mb-2"
+                    onError={() => setHideProfilePhoto(true)}
+                  />
+                )}
                 {card.qrCodeBase64 && <img alt="qr" src={card.qrCodeBase64} className="w-40 h-40 mx-auto" />}
               </div>
             </div>

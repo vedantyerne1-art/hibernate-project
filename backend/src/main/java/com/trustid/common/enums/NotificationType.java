@@ -1,0 +1,14 @@
+package com.trustid.common.enums;
+
+public enum NotificationType {
+    OTP_SENT,
+    KYC_SUBMITTED,
+    KYC_APPROVED,
+    KYC_REJECTED,
+    RESUBMISSION_REQUIRED,
+    DOCUMENT_EXPIRY_REMINDER,
+    CONSENT_ACCESS,
+    SHARE_LINK_CREATED,
+    SHARE_LINK_REVOKED,
+    SECURITY_ALERT
+}

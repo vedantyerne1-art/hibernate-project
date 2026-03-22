@@ -72,6 +72,31 @@ public class KycDocument extends AuditableEntity {
     @Builder.Default
     private boolean isShared = false;
 
+    private String folderName;
+
+    @Column(length = 500)
+    private String tags;
+
+    private Long previousVersionId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer versionNumber = 1;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean superseded = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String ocrExtractedText;
+
+    private String ocrName;
+    private LocalDate ocrDob;
+    private String ocrDocumentNumber;
+
+    @Column(columnDefinition = "TEXT")
+    private String comparisonWarning;
+
     private LocalDateTime uploadedAt;
     private LocalDateTime reviewedAt;
 

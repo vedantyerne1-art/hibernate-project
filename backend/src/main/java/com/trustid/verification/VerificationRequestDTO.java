@@ -60,5 +60,10 @@ public class VerificationRequestDTO {
         private String fileName;
         private String mimeType;
         private Long fileSize;
+        private Integer versionNumber;
+        private String ocrName;
+        private LocalDate ocrDob;
+        private String ocrDocumentNumber;
+        private String comparisonWarning;
     }
 }

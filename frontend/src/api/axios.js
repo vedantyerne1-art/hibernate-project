@@ -7,8 +7,14 @@ const normalizeApiBaseUrl = (rawValue) => {
 
 const configuredApiBaseUrl = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 const isBrowserLocal = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const isLanIpv4Host = typeof window !== 'undefined' && /^((10\.)|(192\.168\.)|(172\.(1[6-9]|2\d|3[0-1])\.))\d+\.\d+$/.test(window.location.hostname);
 
-export const API_BASE_URL = configuredApiBaseUrl || (isBrowserLocal ? 'http://localhost:8080/api' : '/api');
+const dynamicLocalApiBaseUrl = typeof window !== 'undefined'
+  ? `http://${window.location.hostname}:8080/api`
+  : null;
+
+export const API_BASE_URL = configuredApiBaseUrl
+  || ((isBrowserLocal || isLanIpv4Host) ? dynamicLocalApiBaseUrl : '/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,

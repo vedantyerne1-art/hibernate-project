@@ -4,8 +4,14 @@ import axios from '../../api/axios';
 
 export default function MyLocker() {
   const [docs, setDocs] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [q, setQ] = useState('');
   const [type, setType] = useState('');
+  const [folderName, setFolderName] = useState('');
+  const [tags, setTags] = useState('');
+  const [compareA, setCompareA] = useState('');
+  const [compareB, setCompareB] = useState('');
+  const [comparisonResult, setComparisonResult] = useState('');
   const [preview, setPreview] = useState(null);
 
   const load = async () => {
@@ -15,6 +21,9 @@ export default function MyLocker() {
     const res = await axios.get(`/locker/documents?${params.toString()}`);
     const allDocs = res?.data?.data || [];
     setDocs(allDocs.filter((doc) => doc?.documentName !== 'KYC Primary Document'));
+
+    const folderRes = await axios.get('/locker/folders');
+    setFolders(folderRes?.data?.data || []);
   };
 
   useEffect(() => {
@@ -27,9 +36,22 @@ export default function MyLocker() {
     if (!file) return;
     const fd = new FormData();
     fd.append('frontFile', file);
-    fd.append('metadata', JSON.stringify({ documentType, documentCategory: 'PERSONAL', documentLabel: file.name }));
+    fd.append('metadata', JSON.stringify({ documentType, documentCategory: 'PERSONAL', documentLabel: file.name, folderName, tags }));
     await axios.post('/locker/documents', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
     await load();
+  };
+
+  const showVersions = async (id) => {
+    const response = await axios.get(`/locker/documents/${id}/versions`);
+    const versions = response?.data?.data || [];
+    const summary = versions.map((v) => `v${v.versionNumber || 1} - ${v.status}`).join('\n');
+    alert(summary || 'No versions found');
+  };
+
+  const compareDocuments = async () => {
+    if (!compareA || !compareB) return;
+    const response = await axios.get(`/locker/documents/compare?first=${compareA}&second=${compareB}`);
+    setComparisonResult(response?.data?.data?.result || 'No comparison output');
   };
 
   const openPreview = async (id) => {
@@ -70,10 +92,31 @@ export default function MyLocker() {
             <option value="UTILITY_BILL">Utility Bill</option>
           </select>
           <button className="px-3 py-2 bg-slate-900 text-white rounded" onClick={load}>Apply</button>
+          <input className="border rounded p-2" placeholder="Folder name" value={folderName} onChange={(e) => setFolderName(e.target.value)} />
+          <input className="border rounded p-2" placeholder="Tags (comma separated)" value={tags} onChange={(e) => setTags(e.target.value)} />
           <label className="px-3 py-2 bg-blue-600 text-white rounded cursor-pointer text-center">
             Upload
             <input type="file" className="hidden" onChange={(e) => upload(e.target.files?.[0], type || 'OTHER')} />
           </label>
+        </div>
+
+        {folders.length > 0 && (
+          <div className="mb-4 text-sm text-slate-600">
+            Folders: {folders.map((f) => f.folderName).join(', ')}
+          </div>
+        )}
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <select className="border rounded p-2" value={compareA} onChange={(e) => setCompareA(e.target.value)}>
+            <option value="">Compare doc A</option>
+            {filtered.map((d) => <option key={d.id} value={d.id}>{d.documentName}</option>)}
+          </select>
+          <select className="border rounded p-2" value={compareB} onChange={(e) => setCompareB(e.target.value)}>
+            <option value="">Compare doc B</option>
+            {filtered.map((d) => <option key={d.id} value={d.id}>{d.documentName}</option>)}
+          </select>
+          <button className="px-3 py-2 bg-slate-900 text-white rounded" onClick={compareDocuments}>Compare</button>
+          {comparisonResult && <span className="text-sm text-amber-700">{comparisonResult}</span>}
         </div>
 
         <div className="grid md:grid-cols-3 gap-3">
@@ -81,9 +124,14 @@ export default function MyLocker() {
             <div key={d.id} className="border rounded p-3 bg-slate-50">
               <p className="font-semibold">{d.documentName}</p>
               <p className="text-xs text-slate-500">{d.documentType} · {d.status}</p>
+              <p className="text-xs text-slate-500">Version: {d.versionNumber || 1}</p>
+              {d.folderName && <p className="text-xs text-slate-500">Folder: {d.folderName}</p>}
+              {d.tags && <p className="text-xs text-slate-500">Tags: {d.tags}</p>}
+              {d.comparisonWarning && <p className="text-xs text-amber-700">{d.comparisonWarning}</p>}
               <div className="mt-3 flex gap-2">
                 <button className="text-sm text-blue-600" onClick={() => openPreview(d.id)}>Preview</button>
                 <button className="text-sm text-blue-600" onClick={() => download(d.id, d.fileName)}>Download</button>
+                <button className="text-sm text-blue-600" onClick={() => showVersions(d.id)}>Versions</button>
                 <button className="text-sm text-red-600" onClick={async () => { await axios.patch(`/locker/documents/${d.id}/archive`); await load(); }}>Archive</button>
               </div>
             </div>

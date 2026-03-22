@@ -1,8 +1,13 @@
 package com.trustid.identity.service;
 
 import java.net.MalformedURLException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,10 +58,11 @@ public class QrVerificationService {
 
         String token = jwtService.generateToken(claims, "qr-verify:" + user.getEmail(), qrTokenExpirationMs);
         LocalDateTime expiresAt = LocalDateTime.now().plusNanos(qrTokenExpirationMs * 1_000_000L);
+        String resolvedVerifyBaseUrl = resolvePublicBaseUrl(qrVerifyBaseUrl);
 
         return QrTokenResponse.builder()
                 .token(token)
-                .verificationUrl(qrVerifyBaseUrl + "?token=" + token)
+                .verificationUrl(resolvedVerifyBaseUrl + "?token=" + token)
                 .expiresAt(expiresAt)
                 .build();
     }
@@ -102,5 +108,48 @@ public class QrVerificationService {
                 Long userId = claims.get("uid", Number.class).longValue();
                 return identityRepository.findByUserId(userId)
                                 .orElseThrow(() -> new RuntimeException("Identity profile not found"));
+        }
+
+        private String resolvePublicBaseUrl(String configuredBaseUrl) {
+                if (configuredBaseUrl == null || configuredBaseUrl.isBlank()) {
+                        return configuredBaseUrl;
+                }
+
+                if (!configuredBaseUrl.contains("localhost") && !configuredBaseUrl.contains("127.0.0.1")) {
+                        return configuredBaseUrl;
+                }
+
+                String lanIp = detectLanIpv4();
+                if (lanIp == null || lanIp.isBlank()) {
+                        return configuredBaseUrl;
+                }
+
+                return configuredBaseUrl
+                                .replace("localhost", lanIp)
+                                .replace("127.0.0.1", lanIp);
+        }
+
+        private String detectLanIpv4() {
+                try {
+                        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+                        while (interfaces != null && interfaces.hasMoreElements()) {
+                                NetworkInterface ni = interfaces.nextElement();
+                                if (!ni.isUp() || ni.isLoopback() || ni.isVirtual()) {
+                                        continue;
+                                }
+
+                                Enumeration<InetAddress> addresses = ni.getInetAddresses();
+                                while (addresses.hasMoreElements()) {
+                                        InetAddress address = addresses.nextElement();
+                                        if (address instanceof Inet4Address && address.isSiteLocalAddress()) {
+                                                return address.getHostAddress();
+                                        }
+                                }
+                        }
+                } catch (SocketException ex) {
+                        return null;
+                }
+
+                return null;
         }
 }

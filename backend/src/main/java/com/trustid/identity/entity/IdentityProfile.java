@@ -1,8 +1,10 @@
 package com.trustid.identity.entity;
 
 import com.trustid.common.base.AuditableEntity;
+import com.trustid.common.enums.IdentityLevel;
 import com.trustid.common.enums.KycOnboardingStep;
 import com.trustid.common.enums.IdentityStatus;
+import com.trustid.common.enums.RiskLevel;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -91,6 +93,22 @@ public class IdentityProfile extends AuditableEntity {
 
     @Column(nullable = false)
     private Long userId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer trustScore = 0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private IdentityLevel identityLevel = IdentityLevel.LEVEL_1_BASIC;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private RiskLevel riskLevel = RiskLevel.LOW;
+
+    private LocalDateTime lastRiskEvaluatedAt;
 
     @Version
     private Long version;
