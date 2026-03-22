@@ -11,7 +11,7 @@ Example backend URL:
 
 ## 2) Configure backend CORS
 Set backend env:
-- `APP_ALLOWED_ORIGINS=https://your-netlify-site.netlify.app`
+- `APP_ALLOWED_ORIGINS=https://your-netlify-site.netlify.apps`
 
 If you use a custom frontend domain, add that too:
 - `APP_ALLOWED_ORIGINS=https://app.yourdomain.com`
